@@ -6,3 +6,14 @@ faiss-cpu==1.11.0      # For CPU version, or use faiss-gpu for GPU
 sentence-transformers==4.1.0  # Ensure this matches your usage
 uvicorn
 python-dotenv
+beautifulsoup4
+python-docx
+pymupdf
+requests
+
+
+
+
+
+
+
