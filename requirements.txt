@@ -1,0 +1,8 @@
+fastapi== 0.115.12       # You can change the version as per your project requirements
+mysql-connector-python==9.3.0  # Use the appropriate version if needed
+pydantic== 2.11.5       # Ensure the version matches your usage
+openai== 1.82.0       # Use the latest version if possible
+faiss-cpu==1.11.0      # For CPU version, or use faiss-gpu for GPU
+sentence-transformers==4.1.0  # Ensure this matches your usage
+uvicorn
+python-dotenv
