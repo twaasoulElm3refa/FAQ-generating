@@ -1,39 +1,42 @@
 import os
 import json
-from fastapi import FastAPI, UploadFile, Form
-from fastapi.responses import JSONResponse
-from openai import OpenAI
-from docx import Document
-import fitz  # PyMuPDF
-import requests
-from bs4 import BeautifulSoup
 import uuid
 import datetime
-import os
+import fitz  # PyMuPDF
+import requests
+import pymysql
+from fastapi import FastAPI, UploadFile, Form
+from fastapi.responses import JSONResponse
+from bs4 import BeautifulSoup
+from docx import Document
 from dotenv import load_dotenv
-
+from typing import Optional
+from openai import OpenAI
 
 app = FastAPI()
 load_dotenv()
 
-host = os.getenv("DB_HOST")
-port = os.getenv("DB_PORT")
+# Initialize OpenAI client
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-# ✅ Where to save uploaded files temporarily
+# MySQL connection settings from .env
+DB_HOST = os.getenv("DB_HOST")
+DB_USER = os.getenv("DB_USER")
+DB_PASSWORD = os.getenv("DB_PASSWORD")
+DB_NAME = os.getenv("DB_NAME")
+DB_PORT = int(os.getenv("DB_PORT", 3306))
+
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# ✅ Load FAQ examples once at startup
 JSON_FILE_PATH = "faq_examples.json"
 try:
     with open(JSON_FILE_PATH, "r", encoding="utf-8") as f:
         faq_examples = json.load(f)
-    print(f"✅ Loaded {len(faq_examples)} FAQ examples from '{JSON_FILE_PATH}'")
 except Exception as e:
     print(f"❌ Failed to load FAQ examples: {e}")
     faq_examples = []
 
-# 📄 Extract text from PDF file
 def extract_text_from_pdf(pdf_path):
     text = ""
     with fitz.open(pdf_path) as doc:
@@ -41,45 +44,40 @@ def extract_text_from_pdf(pdf_path):
             text += page.get_text()
     return text
 
-# 📄 Extract text from DOCX file
 def extract_text_from_docx(docx_path):
     doc = Document(docx_path)
     return "\n".join(para.text.strip() for para in doc.paragraphs if para.text.strip())
 
-# 🌐 Extract text from URL
 def extract_text_from_url(url):
     try:
         response = requests.get(url, timeout=10)
         soup = BeautifulSoup(response.content, "html.parser")
         for tag in soup(["script", "style"]):
             tag.decompose()
-        text = ' '.join(soup.stripped_strings)
-        return text
+        return ' '.join(soup.stripped_strings)
     except Exception as e:
-        print(f"❌ Error fetching URL: {e}")
         return ""
 
-# 🧠 Generate questions and answers using OpenAI
-def generate_questions_and_answers(text, question_number,questions):
+def generate_questions_and_answers(text, question_number, questions):
     examples_text = ""
-    for idx, item in enumerate(faq_examples[:5], 1):  # use first 5 examples
+    for idx, item in enumerate(faq_examples[:5], 1):
         examples_text += f"{idx}. س: {item['question']}\n   ج: {item['answer']}\n"
 
     prompt = f"""
 نمط الأسئلة الشائعة لدينا كالتالي:
 {examples_text}
 
-اقرأ النص التالي واستخرج {question_number} سؤالًا شائعًا مع إجابته بطريقهاحترافيه مع الاجابة بشكل كامل .
-النص:
+اقرأ النص التالي واستخرج {question_number} سؤالًا شائعًا مع إجابته بطريقه احترافية:
+
 \"\"\"
 {text}
 \"\"\"
- مع الاجابة عن هذه الاسالة {questions}
 
-  اضف فى النهاية 
- ملاحظات إضافية:
-يمكن العثور على مزيد من المعلومات عن المنتجات والخدمات على الموقع الإلكتروني 
+مع الاجابة عن هذه الأسئلة:
+{questions}
 
+ملاحظات إضافية:
+يمكن العثور على مزيد من المعلومات عن المنتجات والخدمات على الموقع الإلكتروني.
 """
     completion = client.chat.completions.create(
         model="gpt-4o-mini",
@@ -87,54 +85,69 @@ def generate_questions_and_answers(text, question_number,questions):
     )
     return completion.choices[0].message.content
 
-# ✅ API endpoint: upload file or enter URL → get Q&A
+def save_to_db(user_id, file_path, url, custom_questions, question_number, faq_result):
+    try:
+        conn = pymysql.connect(
+            host=DB_HOST,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            database=DB_NAME,
+            port=DB_PORT,
+            charset="utf8mb4"
+        )
+        cursor = conn.cursor()
+        query = """
+            INSERT INTO faq_table 
+            (user_id, file_path, url, custom_questions, questions_number, FAQ_result, datatime)
+            VALUES (%s, %s, %s, %s, %s, %s, NOW())
+        """
+        cursor.execute(query, (
+            user_id,
+            file_path,
+            url,
+            custom_questions,
+            question_number,
+            faq_result
+        ))
+        conn.commit()
+        cursor.close()
+        conn.close()
+    except Exception as e:
+        print(f"❌ DB Error: {e}")
+
 @app.post("/generate-FAQ/{user_id}")
 async def generate_faq(
     user_id: str,
-    file: UploadFile = None,
-    url: str = Form(None),
-    question_number: int = Form(10)
+    file: Optional[UploadFile] = None,
+    url: Optional[str] = Form(None),
+    question_number: int = Form(10),
+    custom_questions: str = Form("")
 ):
     extracted_text = ""
+    file_path = None
 
     if file:
-        original_filename = file.filename
-        ext = os.path.splitext(original_filename)[1].lower()   # get .pdf or .docx
+        ext = os.path.splitext(file.filename)[1].lower()
+        new_filename = f"{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:8]}{ext}"
+        file_path = os.path.join(UPLOAD_FOLDER, new_filename)
 
-        # Generate unique filename
-        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        unique_id = str(uuid.uuid4())[:8]
-        new_filename = f"{timestamp}_{unique_id}{ext}"
-
-        saved_path = os.path.join(UPLOAD_FOLDER, new_filename)
-
-        # Save file safely
-        with open(saved_path, "wb") as f:
+        with open(file_path, "wb") as f:
             f.write(await file.read())
-        print(f"✅ File saved safely at: {saved_path}")
 
-        # Detect extension and extract text
         if ext == ".pdf":
-            extracted_text = extract_text_from_pdf(saved_path)
+            extracted_text = extract_text_from_pdf(file_path)
         elif ext == ".docx":
-            extracted_text = extract_text_from_docx(saved_path)
+            extracted_text = extract_text_from_docx(file_path)
         else:
             return JSONResponse({"error": "Unsupported file type."}, status_code=400)
-            # ⚠️ Remove file after use (or keep it)
-            os.remove(saved_path)
-
     elif url:
         extracted_text = extract_text_from_url(url)
-
     else:
         return JSONResponse({"error": "Please upload a file or provide a URL."}, status_code=400)
 
     if not extracted_text.strip():
         return JSONResponse({"error": "Failed to extract text from input."}, status_code=400)
 
-   # extracted_text = extracted_text[:36000]
-
-    qa_result = generate_questions_and_answers(extracted_text, question_number)
-    return {"questions_and_answers": qa_result}
-
-
+    faq_result = generate_questions_and_answers(extracted_text, question_number, custom_questions)
+    save_to_db(user_id, file_path or "", url or "", custom_questions, question_number, faq_result)
+    return {"questions_and_answers": faq_result}
