@@ -10,6 +10,8 @@ beautifulsoup4
 python-docx
 pymupdf
 requests
+python-multipart
+
 
 
 
