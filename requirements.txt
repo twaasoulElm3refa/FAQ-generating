@@ -11,6 +11,7 @@ python-docx
 pymupdf
 requests
 python-multipart
+pymysql
 
 
 
