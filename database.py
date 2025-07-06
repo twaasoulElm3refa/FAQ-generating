@@ -60,7 +60,7 @@ def fetch_faq(user_id: str ):
 
 
 
-def update_faq(file_path,FAQ_result):
+def update_faq(user_id,FAQ_result):
     connection = get_db_connection()
     if connection is None:
         return False
@@ -70,7 +70,7 @@ def update_faq(file_path,FAQ_result):
         query = """
         UPDATE wpl3_FAQ 
         SET FAQ_result = %s 
-        WHERE file_path = %s
+        WHERE user_id = %s
         """
         cursor.execute(query, (FAQ_result,file_path))
         connection.commit()
