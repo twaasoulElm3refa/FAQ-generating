@@ -132,9 +132,9 @@ async def generate_faq(
             print(f"✅ File saved at: {saved_path}")
     
             if ext == ".pdf":
-                extracted_text = extract_text_from_pdf(file_path)
+                extracted_text = extract_text_from_pdf(saved_path)
             elif ext == ".docx":
-                extracted_text = extract_text_from_docx(file_path)
+                extracted_text = extract_text_from_docx(saved_path)
             else:
                 return JSONResponse({"error": "Unsupported file type."}, status_code=400)
         elif url:
