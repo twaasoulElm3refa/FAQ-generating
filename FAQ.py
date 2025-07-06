@@ -13,9 +13,20 @@ from dotenv import load_dotenv
 from typing import Optional
 from openai import OpenAI
 from database import get_db_connection ,fetch_faq ,update_faq
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 load_dotenv()
+
+app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # 👈 or use ["https://yourwpdomain.com"]
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Initialize OpenAI client
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
