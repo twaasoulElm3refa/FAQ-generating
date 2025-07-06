@@ -12,6 +12,7 @@ from docx import Document
 from dotenv import load_dotenv
 from typing import Optional
 from openai import OpenAI
+from database import get_db_connection ,fetch_faq ,update_faq
 
 app = FastAPI()
 load_dotenv()
@@ -123,6 +124,12 @@ async def generate_faq(
     question_number: int = Form(10),
     custom_questions: str = Form("")
 ):
+
+    connection = get_db_connection()
+    cursor = connection.cursor(dictionary=True)
+    user_session_id = user_id
+
+    release = fetch_faq(user_session_id)
     extracted_text = ""
     file_path = None
 
