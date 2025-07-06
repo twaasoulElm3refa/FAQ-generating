@@ -86,30 +86,7 @@ def generate_questions_and_answers(text, question_number, questions):
     )
     return completion.choices[0].message.content
 
-def save_to_db(user_id, file_path, url, custom_questions, question_number, faq_result):
-    try:
-        conn = pymysql.connect(
-            host=DB_HOST,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            database=DB_NAME,
-            port=DB_PORT,
-            charset="utf8mb4"
-        )
-        cursor = conn.cursor()
-        query = """
-            INSERT INTO faq_table 
-            (user_id, file_path, url, custom_questions, questions_number, FAQ_result, datatime)
-            VALUES (%s, %s, %s, %s, %s, %s, NOW())
-        """
-        cursor.execute(query, (
-            user_id,
-            file_path,
-            url,
-            custom_questions,
-            question_number,
-            faq_result
-        ))
+
         conn.commit()
         cursor.close()
         conn.close()
@@ -129,7 +106,8 @@ async def generate_faq(
     cursor = connection.cursor(dictionary=True)
     user_session_id = user_id
 
-    release = fetch_faq(user_session_id)
+    faq_release = fetch_faq(user_session_id)
+    
     extracted_text = ""
     file_path = None
 
@@ -156,5 +134,10 @@ async def generate_faq(
         return JSONResponse({"error": "Failed to extract text from input."}, status_code=400)
 
     faq_result = generate_questions_and_answers(extracted_text, question_number, custom_questions)
-    save_to_db(user_id, file_path or "", url or "", custom_questions, question_number, faq_result)
+    update_data= update_faq(user_id,faq_result)
+
+    connection.commit()
+    cursor.close()
+    connection.close()
+
     return {"questions_and_answers": faq_result}
