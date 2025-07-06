@@ -105,14 +105,20 @@ async def generate_faq(
         
         extracted_text = ""
         file_path = None
-    
-        if file:
+        UPLOAD_FOLDER = "uploads"
+        os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+        
+        if file and file.filename != "":
             ext = os.path.splitext(file.filename)[1].lower()
             new_filename = f"{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:8]}{ext}"
-            file_path = os.path.join(UPLOAD_FOLDER, new_filename)
-    
-            with open(file_path, "wb") as f:
+        
+            # Create full saved path
+            saved_path = os.path.join(UPLOAD_FOLDER, new_filename)
+        
+            # Save uploaded file
+            with open(saved_path, "wb") as f:
                 f.write(await file.read())
+            print(f"✅ File saved at: {saved_path}")
     
             if ext == ".pdf":
                 extracted_text = extract_text_from_pdf(file_path)
