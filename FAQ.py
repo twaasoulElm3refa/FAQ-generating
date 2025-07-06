@@ -85,13 +85,7 @@ def generate_questions_and_answers(text, question_number, questions):
         messages=[{"role": "user", "content": prompt}]
     )
     return completion.choices[0].message.content
-
-
-        conn.commit()
-        cursor.close()
-        conn.close()
-    except Exception as e:
-        print(f"❌ DB Error: {e}")
+    
 
 @app.post("/generate-FAQ/{user_id}")
 async def generate_faq(
@@ -102,42 +96,46 @@ async def generate_faq(
     custom_questions: str = Form("")
 ):
 
-    connection = get_db_connection()
-    cursor = connection.cursor(dictionary=True)
-    user_session_id = user_id
-
-    faq_release = fetch_faq(user_session_id)
+    try:
+        connection = get_db_connection()
+        cursor = connection.cursor(dictionary=True)
+        user_session_id = user_id
     
-    extracted_text = ""
-    file_path = None
-
-    if file:
-        ext = os.path.splitext(file.filename)[1].lower()
-        new_filename = f"{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:8]}{ext}"
-        file_path = os.path.join(UPLOAD_FOLDER, new_filename)
-
-        with open(file_path, "wb") as f:
-            f.write(await file.read())
-
-        if ext == ".pdf":
-            extracted_text = extract_text_from_pdf(file_path)
-        elif ext == ".docx":
-            extracted_text = extract_text_from_docx(file_path)
+        faq_release = fetch_faq(user_session_id)
+        
+        extracted_text = ""
+        file_path = None
+    
+        if file:
+            ext = os.path.splitext(file.filename)[1].lower()
+            new_filename = f"{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:8]}{ext}"
+            file_path = os.path.join(UPLOAD_FOLDER, new_filename)
+    
+            with open(file_path, "wb") as f:
+                f.write(await file.read())
+    
+            if ext == ".pdf":
+                extracted_text = extract_text_from_pdf(file_path)
+            elif ext == ".docx":
+                extracted_text = extract_text_from_docx(file_path)
+            else:
+                return JSONResponse({"error": "Unsupported file type."}, status_code=400)
+        elif url:
+            extracted_text = extract_text_from_url(url)
         else:
-            return JSONResponse({"error": "Unsupported file type."}, status_code=400)
-    elif url:
-        extracted_text = extract_text_from_url(url)
-    else:
-        return JSONResponse({"error": "Please upload a file or provide a URL."}, status_code=400)
-
-    if not extracted_text.strip():
-        return JSONResponse({"error": "Failed to extract text from input."}, status_code=400)
-
-    faq_result = generate_questions_and_answers(extracted_text, question_number, custom_questions)
-    update_data= update_faq(user_id,faq_result)
-
-    connection.commit()
-    cursor.close()
-    connection.close()
+            return JSONResponse({"error": "Please upload a file or provide a URL."}, status_code=400)
+    
+        if not extracted_text.strip():
+            return JSONResponse({"error": "Failed to extract text from input."}, status_code=400)
+    
+        faq_result = generate_questions_and_answers(extracted_text, question_number, custom_questions)
+        update_data= update_faq(user_id,faq_result)
+    
+        connection.commit()
+        cursor.close()
+        connection.close()
+    
+    except Exception as e:
+        print(f"❌ DB Error: {e}")
 
     return {"questions_and_answers": faq_result}
