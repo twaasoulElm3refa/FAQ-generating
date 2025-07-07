@@ -30,49 +30,20 @@ def get_db_connection():
         print(f"Error connecting to MySQL: {e}")
         return None
 
-def fetch_faq(user_id: str ):
-    connection = get_db_connection()
-    if connection is None:
-        print("Failed to establish database connection")
-        return []
-    
-    try:
-        cursor = connection.cursor(dictionary=True)
-        query = """
-        SELECT file_path,url,custom_questions,questions_number
-        FROM wpl3_FAQ
-        WHERE user_id = %s 
-        """
-        cursor.execute(query, (user_id,))
 
-        # Fetch the first row
-        faq_result = cursor.fetchall()
-
-        return faq_result
-
-    except Error as e:
-        print(f"Error fetching data: {e}")
-        return []
-    finally:
-        if connection.is_connected():
-            cursor.close()
-            connection.close()
-
-
-
-def update_faq(user_id,FAQ_result):
+def update_faq(user_id, file_path, url, custom_questions, questions_number, FAQ_result):
     connection = get_db_connection()
     if connection is None:
         return False
-    
     try:
         cursor = connection.cursor()
         query = """
-        UPDATE wpl3_FAQ 
-        SET FAQ_result = %s 
-        WHERE user_id = %s
+        INSERT INTO wpl3_FAQ
+        (user_id, file_path, url, custom_questions, questions_number, FAQ_result)
+VALUES (%s, %s, %s, %s, %s, %s,)
+
         """
-        cursor.execute(query, (FAQ_result,file_path))
+        cursor.execute(query, (user_id, file_path, url, custom_questions, questions_number, FAQ_result,))
         connection.commit()
         return True
     except Error as e:
