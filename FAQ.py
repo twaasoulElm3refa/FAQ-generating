@@ -143,7 +143,10 @@ async def generate_faq(
     
         faq_result = generate_questions_and_answers(extracted_text, questions_number, custom_questions)
         update_data= update_faq(user_session_id, saved_path, url, custom_questions, questions_number, faq_result)
-        print(f"✅{update_data}")
+        if update_data:
+            print(f"✅{update_data}")
+        else:
+            print(f"❌{update_data}")
     
     except Exception as e:
         print(f"❌ DB Error: {e}")
