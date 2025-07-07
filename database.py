@@ -34,14 +34,14 @@ def get_db_connection():
 def update_faq(user_id, file_path, url, custom_questions, questions_number, FAQ_result):
     connection = get_db_connection()
     if connection is None:
+        print("Failed to establish database connection")
         return False
     try:
         cursor = connection.cursor()
         query = """
-        INSERT INTO wpl3_FAQ
-        (user_id, file_path, url, custom_questions, questions_number, FAQ_result)
+        INSERT INTO wpl3_FAQ (user_id, file_path, url, custom_questions, questions_number, FAQ_result)
         VALUES (%s, %s, %s, %s, %s, %s)
-        ON DUPLICATE KEY UPDATE article = VALUES(article)
+        ON DUPLICATE KEY UPDATE file_path = VALUES(file_path)
         """
         cursor.execute(query, (user_id, file_path, url, custom_questions, questions_number, FAQ_result))
         connection.commit()
