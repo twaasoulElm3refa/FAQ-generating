@@ -41,6 +41,7 @@ def update_faq(user_id, file_path, url, custom_questions, questions_number, FAQ_
         INSERT INTO wpl3_FAQ
         (user_id, file_path, url, custom_questions, questions_number, FAQ_result)
         VALUES (%s, %s, %s, %s, %s, %s)
+        ON DUPLICATE KEY UPDATE article = VALUES(article)
         """
         cursor.execute(query, (user_id, file_path, url, custom_questions, questions_number, FAQ_result))
         connection.commit()
