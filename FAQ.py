@@ -141,8 +141,8 @@ async def generate_faq(
         if not extracted_text.strip():
             return JSONResponse({"error": "Failed to extract text from input."}, status_code=400)
     
-        faq_result = generate_questions_and_answers(extracted_text, question_number, custom_questions)
-        update_data= update_faq(user_id, saved_path, url, custom_questions, questions_number, faq_result)
+        faq_result = generate_questions_and_answers(extracted_text, questions_number, custom_questions)
+        update_data= update_faq(user_session_id, saved_path, url, custom_questions, questions_number, faq_result)
         print(f"✅{update_data}")
     
     except Exception as e:
