@@ -103,19 +103,15 @@ async def generate_faq(
     user_id: str,
     file: Optional[UploadFile] = None,
     url: Optional[str] = Form(None),
-    question_number: int = Form(10),
+    questions_number: int = Form(10),
     custom_questions: str = Form("")
 ):
 
     try:
-        connection = get_db_connection()
-        cursor = connection.cursor(dictionary=True)
         user_session_id = user_id
-    
-        faq_release = fetch_faq(user_session_id)
         
         extracted_text = ""
-        file_path = None
+        saved_path = None
         UPLOAD_FOLDER = "uploads"
         os.makedirs(UPLOAD_FOLDER, exist_ok=True)
         
@@ -146,11 +142,8 @@ async def generate_faq(
             return JSONResponse({"error": "Failed to extract text from input."}, status_code=400)
     
         faq_result = generate_questions_and_answers(extracted_text, question_number, custom_questions)
-        update_data= update_faq(user_id,faq_result)
-    
-        connection.commit()
-        cursor.close()
-        connection.close()
+        update_data= update_faq(user_id, saved_path, url, custom_questions, questions_number, faq_result)
+        print(f"✅{update_data}")
     
     except Exception as e:
         print(f"❌ DB Error: {e}")
