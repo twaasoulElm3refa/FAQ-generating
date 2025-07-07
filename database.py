@@ -40,17 +40,19 @@ def update_faq(user_id, file_path, url, custom_questions, questions_number, FAQ_
         query = """
         INSERT INTO wpl3_FAQ
         (user_id, file_path, url, custom_questions, questions_number, FAQ_result)
-        VALUES (%s, %s, %s, %s, %s, %s,)
+        VALUES (%s, %s, %s, %s, %s, %s)
         """
-        cursor.execute(query, (user_id, file_path, url, custom_questions, questions_number, FAQ_result,))
+        cursor.execute(query, (user_id, file_path, url, custom_questions, questions_number, FAQ_result))
         connection.commit()
+        print("✅ Data inserted successfully into wpl3_FAQ")
         return True
     except Error as e:
-        print(f"Error updating data: {e}")
+        print(f"❌ Error updating data: {e}")
         return False
     finally:
         if connection.is_connected():
             cursor.close()
             connection.close()
+
 
 
