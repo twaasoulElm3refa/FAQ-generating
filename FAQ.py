@@ -12,7 +12,7 @@ from docx import Document
 from dotenv import load_dotenv
 from typing import Optional
 from openai import OpenAI
-from database import get_db_connection ,update_faq
+from database import get_db_connection ,insert_faq ,update_faq_result
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
