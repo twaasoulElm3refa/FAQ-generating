@@ -18,8 +18,6 @@ from fastapi.middleware.cors import CORSMiddleware
 app = FastAPI()
 load_dotenv()
 
-app = FastAPI()
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # 👈 or use ["https://yourwpdomain.com"]
@@ -37,17 +35,6 @@ DB_USER = os.getenv("DB_USER")
 DB_PASSWORD = os.getenv("DB_PASSWORD")
 DB_NAME = os.getenv("DB_NAME")
 DB_PORT = int(os.getenv("DB_PORT", 3306))
-
-UPLOAD_FOLDER = "uploads"
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
-JSON_FILE_PATH = "faq_examples.json"
-try:
-    with open(JSON_FILE_PATH, "r", encoding="utf-8") as f:
-        faq_examples = json.load(f)
-except Exception as e:
-    print(f"❌ Failed to load FAQ examples: {e}")
-    faq_examples = []
 
 def extract_text_from_pdf(pdf_path):
     text = ""
@@ -109,6 +96,14 @@ async def generate_faq(
 
     try:
         user_session_id = user_id
+        JSON_FILE_PATH = "faq_examples.json"
+        
+        try:
+            with open(JSON_FILE_PATH, "r", encoding="utf-8") as f:
+                faq_examples = json.load(f)
+        except Exception as e:
+            print(f"❌ Failed to load FAQ examples: {e}")
+            faq_examples = []
         
         extracted_text = ""
         saved_path = None
@@ -142,7 +137,10 @@ async def generate_faq(
             return JSONResponse({"error": "Failed to extract text from input."}, status_code=400)
     
         faq_result = generate_questions_and_answers(extracted_text, questions_number, custom_questions)
-        update_data= update_faq(user_session_id, saved_path, url, custom_questions, questions_number, faq_result)
+    
+        request_id  = insert_faq(user_session_id, saved_path, url, custom_questions, questions_number)
+        saving_data = update_faq_result(request_id, faq_result, saved_path)
+        
         if update_data:
             print(f"✅{update_data}")
         else:
