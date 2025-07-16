@@ -30,8 +30,7 @@ def get_db_connection():
         print(f"Error connecting to MySQL: {e}")
         return None
 
-
-def update_faq(user_id, file_path, url, custom_questions, questions_number, FAQ_result):
+def insert_faq(user_id, file_path, url, custom_questions, questions_number):
     connection = get_db_connection()
     if connection is None:
         print("Failed to establish database connection")
@@ -39,12 +38,51 @@ def update_faq(user_id, file_path, url, custom_questions, questions_number, FAQ_
     try:
         cursor = connection.cursor()
         query = """
-        INSERT INTO wpl3_FAQ (user_id, file_path, url, custom_questions, questions_number, FAQ_result)
-        VALUES (%s, %s, %s, %s, %s, %s)
+        INSERT INTO wpl3_FAQ (user_id, file_path, url, custom_questions, questions_number)
+        VALUES (%s, %s, %s, %s, %s)
+        ON DUPLICATE KEY UPDATE 
+        custom_questions = VALUES(custom_questions),
+        questions_number = VALUES(questions_number)
         """
-        cursor.execute(query, (user_id, file_path, url, custom_questions, questions_number, FAQ_result))
+        cursor.execute(query, (user_id, file_path, url, custom_questions, questions_number))
         connection.commit()
         print("✅ Data inserted successfully into wpl3_FAQ")
+
+        select_query = """
+        SELECT id 
+        FROM wpl3_FAQ
+        WHERE user_id = %s AND (file_path = %s AND url = %s)
+        """
+        cursor.execute(select_query, (user_id,file_path, url))
+
+        # Fetch the row
+        id = cursor.fetchone()
+        return id[0] if result else None
+
+    except Error as e:
+        print(f"❌ Error updating data: {e}")
+        return False
+    finally:
+        if connection.is_connected():
+            cursor.close()
+            connection.close()
+
+
+
+def update_faq_result(request_id, FAQ_result, pdf_file_name):
+    connection = get_db_connection()
+    if connection is None:
+        print("Failed to establish database connection")
+        return False
+    try:
+        cursor = connection.cursor()
+        query = """
+        INSERT INTO wpl3_FAQ_result (request_id, FAQ_result, pdf_file_name)
+        VALUES (%s, %s, %s)
+        """
+        cursor.execute(query, (request_id, FAQ_result, pdf_file_name))
+        connection.commit()
+        print("✅ Data inserted successfully into wpl3_FAQ_result")
         return True
     except Error as e:
         print(f"❌ Error updating data: {e}")
