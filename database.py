@@ -57,7 +57,7 @@ def insert_faq(user_id, file_path, url, custom_questions, questions_number):
 
         # Fetch the row
         id = cursor.fetchone()
-        return id[0] if result else None
+        return id[0] if id else None
 
     except Error as e:
         print(f"❌ Error updating data: {e}")
