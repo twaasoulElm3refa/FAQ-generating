@@ -75,6 +75,10 @@ def update_faq_result(request_id, FAQ_result, pdf_file_name):
         print("Failed to establish database connection")
         return False
     try:
+        if not FAQ_result:
+            FAQ_result = "لا توجد نتيجة تم إنشاؤها"
+        if not pdf_file_name:
+            pdf_file_name = ""
         cursor = connection.cursor()
         query = """
         INSERT INTO wpl3_FAQ_result (request_id, FAQ_result, pdf_file_name)
@@ -91,6 +95,7 @@ def update_faq_result(request_id, FAQ_result, pdf_file_name):
         if connection.is_connected():
             cursor.close()
             connection.close()
+
 
 
 
