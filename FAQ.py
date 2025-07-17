@@ -4,7 +4,7 @@ import uuid
 import datetime
 import fitz  # PyMuPDF
 import requests
-import pymysql
+#import pymysql
 from fastapi import FastAPI, UploadFile, Form
 from fastapi.responses import JSONResponse
 from bs4 import BeautifulSoup
@@ -18,23 +18,17 @@ from fastapi.middleware.cors import CORSMiddleware
 app = FastAPI()
 load_dotenv()
 
-app.add_middleware(
+'''app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # 👈 or use ["https://yourwpdomain.com"]
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-)
+)'''
 
 # Initialize OpenAI client
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-# MySQL connection settings from .env
-DB_HOST = os.getenv("DB_HOST")
-DB_USER = os.getenv("DB_USER")
-DB_PASSWORD = os.getenv("DB_PASSWORD")
-DB_NAME = os.getenv("DB_NAME")
-DB_PORT = int(os.getenv("DB_PORT", 3306))
 
 def extract_text_from_pdf(pdf_path):
     text = ""
@@ -49,7 +43,7 @@ def extract_text_from_docx(docx_path):
 
 def extract_text_from_url(url):
     try:
-        response = requests.get(url, timeout=10)
+        response = requests.get(url, timeout=30)
         soup = BeautifulSoup(response.content, "html.parser")
         for tag in soup(["script", "style"]):
             tag.decompose()
