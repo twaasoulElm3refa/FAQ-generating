@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 from typing import Optional
 from openai import OpenAI
 from database import get_db_connection ,update_faq_result
-from fastapi.middleware.cors import CORSMiddleware
+
 
 app = FastAPI()
 load_dotenv()
@@ -68,28 +68,18 @@ def generate_questions_and_answers(text, question_number, questions, faq_example
         messages=[{"role": "user", "content": prompt}]
     )
     return completion.choices[0].message.content
-    
+
 
 @app.post("/generate-FAQ/{user_id}")
 async def generate_faq(
     user_id: str,
     file: Optional[UploadFile] = None,
     url: Optional[str] = Form(None),
-    questions_number: int = Form(10),
+    questions_number: int = Form(...),
     custom_questions: str = Form(""),
-    request_id: Optional[int] = Form(None)
+    request_id: int = Form(...)
 ):
     try:
-        #user_session_id = user_id
-        JSON_FILE_PATH = "faq_examples.json"
-
-        try:
-            with open(JSON_FILE_PATH, "r", encoding="utf-8") as f:
-                faq_examples = json.load(f)
-        except Exception as e:
-            print(f"❌ Failed to load FAQ examples: {e}")
-            faq_examples = []
-
         extracted_text = ""
         saved_path = None
         UPLOAD_FOLDER = "uploads"
@@ -102,34 +92,30 @@ async def generate_faq(
             with open(saved_path, "wb") as f:
                 f.write(await file.read())
 
-            print(f"✅ File saved at: {saved_path}")
-
             if ext == ".pdf":
                 extracted_text = extract_text_from_pdf(saved_path)
             elif ext == ".docx":
                 extracted_text = extract_text_from_docx(saved_path)
-            else:
-                return JSONResponse({"error": "Unsupported file type."}, status_code=400)
-
         elif url:
             extracted_text = extract_text_from_url(url)
-        else:
-            return JSONResponse({"error": "Please upload a file or provide a URL."}, status_code=400)
 
         if not extracted_text.strip():
-            return JSONResponse({"error": "Failed to extract text from input."}, status_code=400)
+            return JSONResponse({"error": "No content found"}, status_code=400)
 
-        save_response = requests.post( ... )
+        with open("faq_examples.json", "r", encoding="utf-8") as f:
+            faq_examples = json.load(f)
 
-        if save_response.status_code == 200:
-            result_json = save_response.json()
-            if result_json.get('success') and 'id' in result_json.get('data', {}):
-                request_id = result_json['data']['id']
-            else:
-                raise Exception("❌ لم يتم استرجاع ID من WP response.")
+        faq_result = generate_questions_and_answers(extracted_text, questions_number, custom_questions, faq_examples)
+
+        saved = update_faq_result(request_id, faq_result, saved_path or "")
+        if saved:
+            return {"questions_and_answers": faq_result}
         else:
-            raise Exception("❌ خطأ في حفظ البيانات إلى WP.")
+            return JSONResponse({"error": "Failed to save result"}, status_code=500)
 
+    except Exception as e:
+        print(f"❌ Exception: {e}")
+        return JSONResponse({"error": "Server error occurred."}, status_code=500)
 
         faq_result = generate_questions_and_answers(extracted_text, questions_number, custom_questions, faq_examples)
         saving_data = update_faq_result(request_id, faq_result, saved_path)
