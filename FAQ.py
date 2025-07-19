@@ -72,12 +72,12 @@ def generate_questions_and_answers(text, question_number, questions, faq_example
 
 @app.post("/generate-FAQ/{user_id}")
 async def generate_faq(
-    request_id: int = Form(...),
     user_id: str,
     file: Optional[UploadFile] = None,
     url: Optional[str] = Form(None),
     questions_number: int = Form(10),
-    custom_questions: str = Form("")
+    custom_questions: str = Form(""),
+    request_id: int = Form(...)
 ):
     try:
         #user_session_id = user_id
