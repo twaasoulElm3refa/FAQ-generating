@@ -72,6 +72,7 @@ def generate_questions_and_answers(text, question_number, questions, faq_example
 
 @app.post("/generate-FAQ/{user_id}")
 async def generate_faq(
+    request_id: int = Form(...),
     user_id: str,
     file: Optional[UploadFile] = None,
     url: Optional[str] = Form(None),
@@ -117,6 +118,18 @@ async def generate_faq(
 
         if not extracted_text.strip():
             return JSONResponse({"error": "Failed to extract text from input."}, status_code=400)
+
+        save_response = requests.post( ... )
+
+        if save_response.status_code == 200:
+            result_json = save_response.json()
+            if result_json.get('success') and 'id' in result_json.get('data', {}):
+                request_id = result_json['data']['id']
+            else:
+                raise Exception("❌ لم يتم استرجاع ID من WP response.")
+        else:
+            raise Exception("❌ خطأ في حفظ البيانات إلى WP.")
+
 
         faq_result = generate_questions_and_answers(extracted_text, questions_number, custom_questions, faq_examples)
         saving_data = update_faq_result(request_id, faq_result, saved_path)
