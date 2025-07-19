@@ -77,7 +77,7 @@ async def generate_faq(
     url: Optional[str] = Form(None),
     questions_number: int = Form(10),
     custom_questions: str = Form(""),
-    request_id: int = Form(...)
+    request_id: Optional[int] = Form(None)
 ):
     try:
         #user_session_id = user_id
