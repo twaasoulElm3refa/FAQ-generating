@@ -4,7 +4,6 @@ import uuid
 import datetime
 import fitz  # PyMuPDF
 import requests
-#import pymysql
 from fastapi import FastAPI, UploadFile, Form
 from fastapi.responses import JSONResponse
 from bs4 import BeautifulSoup
@@ -12,19 +11,11 @@ from docx import Document
 from dotenv import load_dotenv
 from typing import Optional
 from openai import OpenAI
-from database import get_db_connection ,insert_faq ,update_faq_result
+from database import get_db_connection ,update_faq_result
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 load_dotenv()
-
-'''app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # 👈 or use ["https://yourwpdomain.com"]
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)'''
 
 # Initialize OpenAI client
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
@@ -88,7 +79,7 @@ async def generate_faq(
     custom_questions: str = Form("")
 ):
     try:
-        user_session_id = user_id
+        #user_session_id = user_id
         JSON_FILE_PATH = "faq_examples.json"
 
         try:
@@ -128,8 +119,6 @@ async def generate_faq(
             return JSONResponse({"error": "Failed to extract text from input."}, status_code=400)
 
         faq_result = generate_questions_and_answers(extracted_text, questions_number, custom_questions, faq_examples)
-
-        request_id = insert_faq(user_session_id, saved_path, url, custom_questions, questions_number)
         saving_data = update_faq_result(request_id, faq_result, saved_path)
 
         if saving_data:
