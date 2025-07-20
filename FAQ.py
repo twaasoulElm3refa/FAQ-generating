@@ -4,22 +4,17 @@ import uuid
 import datetime
 import fitz  # PyMuPDF
 import requests
-from fastapi import FastAPI, UploadFile, Form
+from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from bs4 import BeautifulSoup
 from docx import Document
 from dotenv import load_dotenv
-from typing import Optional
 from openai import OpenAI
-from database import get_db_connection ,update_faq_result
-
+from database import get_data_by_request_id, update_faq_result
 
 app = FastAPI()
 load_dotenv()
-
-# Initialize OpenAI client
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
 
 def extract_text_from_pdf(pdf_path):
     text = ""
@@ -51,17 +46,14 @@ def generate_questions_and_answers(text, question_number, questions, faq_example
 نمط الأسئلة الشائعة لدينا كالتالي:
 {examples_text}
 
-اقرأ النص التالي واستخرج {question_number} سؤالًا شائعًا مع إجابته بطريقه احترافية:
+اقرأ النص التالي واستخرج {question_number} سؤالًا شائعًا مع إجابته بطريقة احترافية:
 
 \"\"\"
 {text}
 \"\"\"
 
-مع الاجابة عن هذه الأسئلة:
+مع الإجابة عن هذه الأسئلة:
 {questions}
-
-ملاحظات إضافية:
-يمكن العثور على مزيد من المعلومات عن المنتجات والخدمات على الموقع الإلكتروني.
 """
     completion = client.chat.completions.create(
         model="gpt-4o-mini",
@@ -70,45 +62,47 @@ def generate_questions_and_answers(text, question_number, questions, faq_example
     return completion.choices[0].message.content
 
 
-@app.post("/generate-FAQ/{user_id}")
-async def generate_faq(
-    user_id: str,
-    file: Optional[UploadFile] = None,
-    url: Optional[str] = Form(None),
-    questions_number: int = Form(...),
-    custom_questions: str = Form(""),
-    request_id: int = Form(...)
-):
+@app.post("/generate-FAQ/{request_id}")
+async def generate_faq(request_id: int):
     try:
+        data = get_data_by_request_id(request_id)
+        if not data:
+            return JSONResponse({"error": "No data found for this ID."}, status_code=404)
+
+        file_path = data.get("file_path")
+        url = data.get("url")
+        questions_number = data.get("questions_number", 10)
+        custom_questions = data.get("custom_questions", "")
+
         extracted_text = ""
-        saved_path = None
-        UPLOAD_FOLDER = "uploads"
-        os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-        if file and file.filename != "":
-            ext = os.path.splitext(file.filename)[1].lower()
-            new_filename = f"{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:8]}{ext}"
-            saved_path = os.path.join(UPLOAD_FOLDER, new_filename)
-            with open(saved_path, "wb") as f:
-                f.write(await file.read())
-
+        if file_path and os.path.exists(file_path):
+            ext = os.path.splitext(file_path)[1].lower()
             if ext == ".pdf":
-                extracted_text = extract_text_from_pdf(saved_path)
-            elif ext == ".docx":
-                extracted_text = extract_text_from_docx(saved_path)
+                extracted_text = extract_text_from_pdf(file_path)
+            elif ext in [".doc", ".docx"]:
+                extracted_text = extract_text_from_docx(file_path)
         elif url:
             extracted_text = extract_text_from_url(url)
 
         if not extracted_text.strip():
-            return JSONResponse({"error": "No content found"}, status_code=400)
+            return JSONResponse({"error": "No content found."}, status_code=400)
 
         with open("faq_examples.json", "r", encoding="utf-8") as f:
             faq_examples = json.load(f)
 
         faq_result = generate_questions_and_answers(extracted_text, questions_number, custom_questions, faq_examples)
 
-        saved = update_faq_result(request_id, faq_result, saved_path or "")
+        saved = update_faq_result(request_id, faq_result, file_path or "")
         if saved:
+            # 🗑️ حذف الملف بعد الاستخدام
+            if file_path and os.path.exists(file_path):
+                try:
+                    os.remove(file_path)
+                    print(f"🗑️ Deleted file: {file_path}")
+                except Exception as e:
+                    print(f"⚠️ Failed to delete file: {e}")
+
             return {"questions_and_answers": faq_result}
         else:
             return JSONResponse({"error": "Failed to save result"}, status_code=500)
@@ -116,20 +110,3 @@ async def generate_faq(
     except Exception as e:
         print(f"❌ Exception: {e}")
         return JSONResponse({"error": "Server error occurred."}, status_code=500)
-
-        faq_result = generate_questions_and_answers(extracted_text, questions_number, custom_questions, faq_examples)
-        saving_data = update_faq_result(request_id, faq_result, saved_path)
-
-        if saving_data:
-            print(f"✅ Saved: {saving_data}")
-        else:
-            print("❌ Failed to update result")
-
-        return {"questions_and_answers": faq_result}
-
-    except Exception as e:
-        print(f"❌ Exception: {e}")
-        return JSONResponse({"error": "Server error occurred."}, status_code=500)
-
-
-    return {"questions_and_answers": faq_result}
