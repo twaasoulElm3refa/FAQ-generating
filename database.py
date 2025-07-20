@@ -30,6 +30,28 @@ def get_db_connection():
         print(f"Error connecting to MySQL: {e}")
         return None
 
+def get_data_by_request_id(request_id):
+    try:
+        connection = get_db_connection()
+        cursor = connection.cursor(dictionary=True)
+
+        query = """
+            SELECT file_path, url, questions_number, custom_questions
+            FROM wpl3_FAQ
+            WHERE id = %s
+        """
+        cursor.execute(query, (request_id,))
+        result = cursor.fetchone()
+
+        cursor.close()
+        connection.close()
+
+        return result if result else None
+
+    except Exception as e:
+        print(f"❌ Error fetching data for ID {request_id}: {e}")
+        return None
+
 
 def update_faq_result(request_id, FAQ_result, pdf_file_name):
     connection = get_db_connection()
