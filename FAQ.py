@@ -62,7 +62,7 @@ def generate_questions_and_answers(text, question_number, questions, faq_example
     return completion.choices[0].message.content
 
 
-@app.post("/generate-FAQ/{request_id}")
+@app.get("/generate-FAQ/{request_id}")
 async def generate_faq(request_id: int):
     try:
         data = get_data_by_request_id(request_id)
