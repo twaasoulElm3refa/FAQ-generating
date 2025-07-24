@@ -1,7 +1,7 @@
 import os
 import json
-import uuid
-import datetime
+#import uuid
+#import datetime
 import fitz  # PyMuPDF
 import requests
 from fastapi import FastAPI
@@ -11,6 +11,8 @@ from docx import Document
 from dotenv import load_dotenv
 from openai import OpenAI
 from database import get_data_by_request_id, update_faq_result
+from pydantic import BaseModel
+import pymysql
 
 app = FastAPI()
 load_dotenv()
@@ -62,12 +64,24 @@ def generate_questions_and_answers(text, question_number, questions, faq_example
     return completion.choices[0].message.content
 
 
-@app.get("/generate-FAQ/{request_id}")
-async def generate_faq(request_id: int):
+#@app.get("/generate-FAQ/{request_id}")
+#async def generate_faq(request_id: int):
+
+class FAQRequest(BaseModel):
+    request_id: int
+    user_id: int
+    file_path: str
+    url: str
+    question_number: int
+    custom_questions: str
+
+
+@app.post("/process-faq")
+def process_faq(data: FAQRequest):
     try:
-        data = get_data_by_request_id(request_id)
-        if not data:
-            return JSONResponse({"error": "No data found for this ID."}, status_code=404)
+        #data = get_data_by_request_id(request_id)
+        #if not data:
+        #    return JSONResponse({"error": "No data found for this ID."}, status_code=404)
 
         file_path = data.get("file_path")
         url = data.get("url")
@@ -93,7 +107,7 @@ async def generate_faq(request_id: int):
 
         faq_result = generate_questions_and_answers(extracted_text, questions_number, custom_questions, faq_examples)
 
-        saved = update_faq_result(request_id, faq_result, file_path or "")
+        saved = update_faq_result(data.request_id, faq_result, file_path or "")
         if saved:
             # 🗑️ حذف الملف بعد الاستخدام
             if file_path and os.path.exists(file_path):
@@ -103,7 +117,7 @@ async def generate_faq(request_id: int):
                 except Exception as e:
                     print(f"⚠️ Failed to delete file: {e}")
 
-            return {"questions_and_answers": faq_result}
+            return JSONResponse(content={"questions_and_answers": faq_result})
         else:
             return JSONResponse({"error": "Failed to save result"}, status_code=500)
 
