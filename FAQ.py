@@ -15,6 +15,12 @@ from pydantic import BaseModel
 import pymysql
 from fastapi.middleware.cors import CORSMiddleware
 
+app = FastAPI()
+load_dotenv()
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+UPLOAD_DIR = "./uploads"  # تأكد من أن المجلد موجود ولديه صلاحيات كتابة
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://11ai.ellevensa.com"],  # يمكن لاحقًا استبداله بـ ["https://yourdomain.com"]
@@ -23,11 +29,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app = FastAPI()
-load_dotenv()
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-UPLOAD_DIR = "./uploads"  # تأكد من أن المجلد موجود ولديه صلاحيات كتابة
-os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 def extract_text_from_pdf(pdf_path):
     text = ""
