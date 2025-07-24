@@ -80,7 +80,7 @@ def generate_questions_and_answers(text, question_number, questions, faq_example
 #async def generate_faq(request_id: int):
 
 class FAQRequest(BaseModel):
-    request_id: int
+    record_id: int
     user_id: int
     url: str
     question_number: int
@@ -90,7 +90,7 @@ class FAQRequest(BaseModel):
 @app.get("/process-faq/{record_id}")
 def process_faq(record_id: int):
     try:
-        data = get_data_by_request_id(request_id)
+        data = get_data_by_request_id(record_id)
         if not data:
             return JSONResponse({"error": "No data found for this ID."}, status_code=404)
             
