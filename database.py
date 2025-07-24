@@ -13,7 +13,6 @@ db_user = os.getenv("DB_USER")
 db_password = os.getenv("DB_PASSWORD")
 db_port = os.getenv("DB_PORT")
 
-
 def get_db_connection():
     try:
         connection = mysql.connector.connect(
@@ -52,8 +51,7 @@ def get_data_by_request_id(request_id):
         print(f"❌ Error fetching data for ID {request_id}: {e}")
         return None
 
-
-def update_faq_result(request_id, FAQ_result, pdf_file_name):
+def update_faq_result(record_id, FAQ_result, pdf_file_name):
     connection = get_db_connection()
     if connection is None:
         print("Failed to establish database connection")
@@ -65,10 +63,10 @@ def update_faq_result(request_id, FAQ_result, pdf_file_name):
             pdf_file_name = ""
         cursor = connection.cursor()
         query = """
-        INSERT INTO wpl3_FAQ_result (request_id, FAQ_result, pdf_file_name)
-        VALUES (%s, %s, %s)
+        "UPDATE wpl3_FAQ SET FAQ_result = %s WHERE id = %s",
+        VALUES (%s, %s)
         """
-        cursor.execute(query, (request_id, FAQ_result, pdf_file_name))
+        cursor.execute(query, (FAQ_result, record_id))
         connection.commit()
         print("✅ Data inserted successfully into wpl3_FAQ_result")
         return True
@@ -80,6 +78,10 @@ def update_faq_result(request_id, FAQ_result, pdf_file_name):
             cursor.close()
             connection.close()
 
-
+''' query = """
+        INSERT INTO wpl3_FAQ_result (request_id, FAQ_result, pdf_file_name)
+        VALUES (%s, %s, %s)
+        """
+        cursor.execute(query, (request_id, FAQ_result, pdf_file_name))'''
 
 
