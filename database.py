@@ -51,7 +51,7 @@ def get_data_by_request_id(request_id):
         print(f"❌ Error fetching data for ID {request_id}: {e}")
         return None
 
-def update_faq_result(record_id, FAQ_result, pdf_file_name):
+def update_faq_result(record_id, FAQ_result):
     connection = get_db_connection()
     if connection is None:
         print("Failed to establish database connection")
@@ -78,7 +78,9 @@ def update_faq_result(record_id, FAQ_result, pdf_file_name):
             cursor.close()
             connection.close()
 
-''' query = """
+''' 
+def update_faq_result(record_id, FAQ_result, pdf_file_name):
+query = """
         INSERT INTO wpl3_FAQ_result (request_id, FAQ_result, pdf_file_name)
         VALUES (%s, %s, %s)
         """
