@@ -13,6 +13,15 @@ from openai import OpenAI
 from database import get_data_by_request_id, update_faq_result
 from pydantic import BaseModel
 import pymysql
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["https://11ai.ellevensa.com/"]  # يمكن لاحقًا استبداله بـ ["https://yourdomain.com"]
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app = FastAPI()
 load_dotenv()
