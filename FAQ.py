@@ -17,6 +17,8 @@ import pymysql
 app = FastAPI()
 load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+UPLOAD_DIR = "./uploads"  # تأكد من أن المجلد موجود ولديه صلاحيات كتابة
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 def extract_text_from_pdf(pdf_path):
     text = ""
@@ -70,19 +72,18 @@ def generate_questions_and_answers(text, question_number, questions, faq_example
 class FAQRequest(BaseModel):
     request_id: int
     user_id: int
-    file_path: str
     url: str
     question_number: int
     custom_questions: str
 
 
-@app.post("/process-faq")
-def process_faq(data: FAQRequest):
+@app.get("/process-faq/{record_id}")
+def process_faq(record_id: int):
     try:
-        #data = get_data_by_request_id(request_id)
-        #if not data:
-        #    return JSONResponse({"error": "No data found for this ID."}, status_code=404)
-
+        data = get_data_by_request_id(request_id)
+        if not data:
+            return JSONResponse({"error": "No data found for this ID."}, status_code=404)
+            
         file_path = data.get("file_path")
         url = data.get("url")
         questions_number = data.get("questions_number", 10)
@@ -106,8 +107,8 @@ def process_faq(data: FAQRequest):
             faq_examples = json.load(f)
 
         faq_result = generate_questions_and_answers(extracted_text, questions_number, custom_questions, faq_examples)
-
-        saved = update_faq_result(data.request_id, faq_result, file_path or "")
+        saved = update_faq_result(record_id, faq_result, file_path or "")
+        #data.request_id
         if saved:
             # 🗑️ حذف الملف بعد الاستخدام
             if file_path and os.path.exists(file_path):
