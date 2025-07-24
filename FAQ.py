@@ -107,7 +107,7 @@ def process_faq(record_id: int):
             faq_examples = json.load(f)
 
         faq_result = generate_questions_and_answers(extracted_text, questions_number, custom_questions, faq_examples)
-        saved = update_faq_result(record_id, faq_result, file_path or "")
+        saved = update_faq_result(record_id, faq_result)
         #data.request_id
         if saved:
             # 🗑️ حذف الملف بعد الاستخدام
@@ -125,3 +125,4 @@ def process_faq(record_id: int):
     except Exception as e:
         print(f"❌ Exception: {e}")
         return JSONResponse({"error": "Server error occurred."}, status_code=500)
+#, file_path or ""
