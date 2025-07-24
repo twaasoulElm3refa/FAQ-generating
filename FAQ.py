@@ -17,7 +17,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://11ai.ellevensa.com/"]  # يمكن لاحقًا استبداله بـ ["https://yourdomain.com"]
+    allow_origins=["https://11ai.ellevensa.com"]  # يمكن لاحقًا استبداله بـ ["https://yourdomain.com"]
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
