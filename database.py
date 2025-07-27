@@ -75,3 +75,20 @@ def update_faq_result(record_id, FAQ_result):
         if connection.is_connected():
             cursor.close()
             connection.close()
+
+def insert_full_record(user_id, file_path, url, questions_number, custom_questions, faq_result):
+    connection = get_db_connection()
+    cursor = connection.cursor(dictionary=True)
+    try:
+        cursor.execute("""
+            INSERT INTO wpl3_FAQ (user_id, file_path, url, questions_number, custom_questions, FAQ_result,updated_at)
+            VALUES (%s, %s, %s, %s, %s, %s, NOW())
+        """, (user_id, file_path, url, questions_number, custom_questions, faq_result))
+        connection.commit()
+        return True
+    finally:
+         if connection.is_connected():
+            cursor.close()
+            connection.close()
+
+
