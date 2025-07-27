@@ -141,65 +141,6 @@ async def process_faq(
         # حذف الملف بعد الاستخدام
         if file_path and os.path.exists(file_path):
             os.remove(file_path)
-
-        return JSONResponse(content={"questions_and_answers": faq_result})
-
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return JSONResponse({"error": str(e)}, status_code=500)
-
-
-# واجهة المعالجة عبر record_id
-@app.get("/process-faq/{record_id}")
-def process_faq(record_id: int):
-    try:
-        # جلب البيانات من قاعدة البيانات
-        data = get_data_by_request_id(record_id)
-        if not data:
-            return JSONResponse({"error": "No data found for this ID."}, status_code=404)
-
-        file_path = data.get("file_path")
-        url = data.get("url")
-        questions_number = data.get("questions_number", 10)
-        custom_questions = data.get("custom_questions", "")
-
-        extracted_text = ""
-
-        # استخراج النص من الملف
-        if file_path and os.path.exists(file_path):
-            ext = os.path.splitext(file_path)[1].lower()
-            if ext == ".pdf":
-                extracted_text = extract_text_from_pdf(file_path)
-            elif ext in [".doc", ".docx"]:
-                extracted_text = extract_text_from_docx(file_path)
-            elif ext in [".pptx"]:
-                extracted_text = extract_text_from_pptx(file_path)
-
-        # أو من الرابط
-        elif url:
-            extracted_text = extract_text_from_url(url)
-
-        if not extracted_text.strip():
-            return JSONResponse({"error": "تعذر استخراج نص من الرابط أو الملف."}, status_code=400)
-
-        with open("faq_examples.json", "r", encoding="utf-8") as f:
-            faq_examples = json.load(f)
-
-        # توليد الأسئلة
-        faq_result = generate_questions_and_answers(
-            extracted_text, questions_number, custom_questions, faq_examples
-        )
-
-        # تحديث السجل بالنتيجة
-        saved = update_faq_result(record_id, faq_result)
-
-        # حذف الملف بعد المعالجة
-        if saved and file_path and os.path.exists(file_path):
-            try:
-                os.remove(file_path)
-            except Exception:
-                pass
             cleanup_old_files(days=7)
             
         return JSONResponse(content={"questions_and_answers": faq_result})
