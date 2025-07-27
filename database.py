@@ -41,13 +41,13 @@ def get_data_by_request_id(request_id):
         result = cursor.fetchone()
         return result if result else None
         
-    finally:
-        cursor.close()
-        connection.close()
-
     except Exception as e:
         print(f"❌ Error fetching data for ID {request_id}: {e}")
         return None
+        
+    finally:
+        cursor.close()
+        connection.close()
 
 def update_faq_result(record_id, FAQ_result):
     connection = get_db_connection()
