@@ -1,6 +1,5 @@
 import mysql.connector
 from mysql.connector import Error
-from datetime import timedelta
 from dotenv import load_dotenv
 import os
 
@@ -35,17 +34,16 @@ def get_data_by_request_id(request_id):
         cursor = connection.cursor(dictionary=True)
 
         query = """
-            SELECT file_path, url, questions_number, custom_questions
-            FROM wpl3_FAQ
+            SELECT * FROM wpl3_FAQ
             WHERE id = %s
         """
         cursor.execute(query, (request_id,))
         result = cursor.fetchone()
-
+        return result if result else None
+        
+    finally:
         cursor.close()
         connection.close()
-
-        return result if result else None
 
     except Exception as e:
         print(f"❌ Error fetching data for ID {request_id}: {e}")
@@ -63,7 +61,7 @@ def update_faq_result(record_id, FAQ_result):
             pdf_file_name = ""
         cursor = connection.cursor()
         query = """
-        "UPDATE wpl3_FAQ SET FAQ_result = %s WHERE id = %s",
+        "UPDATE wpl3_FAQ SET FAQ_result = %s, updated_at = NOW() WHERE id = %s",
         VALUES (%s, %s)
         """
         cursor.execute(query, (FAQ_result, record_id))
@@ -77,13 +75,3 @@ def update_faq_result(record_id, FAQ_result):
         if connection.is_connected():
             cursor.close()
             connection.close()
-
-''' 
-def update_faq_result(record_id, FAQ_result, pdf_file_name):
-query = """
-        INSERT INTO wpl3_FAQ_result (request_id, FAQ_result, pdf_file_name)
-        VALUES (%s, %s, %s)
-        """
-        cursor.execute(query, (request_id, FAQ_result, pdf_file_name))'''
-
-
