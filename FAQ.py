@@ -10,8 +10,11 @@ from docx import Document
 from pptx import Presentation
 from openai import OpenAI
 from dotenv import load_dotenv
-from database import get_data_by_request_id, update_faq_result
+from database import get_data_by_request_id, update_faq_result,insert_full_record
 from datetime import datetime
+import glob
+import time
+
 
 # تحميل المتغيرات البيئية
 load_dotenv()
@@ -87,6 +90,66 @@ def generate_questions_and_answers(text, question_number, questions, faq_example
     )
     return completion.choices[0].message.content
 
+@app.post("/process-faq")
+async def process_faq(
+    file: UploadFile = File(None),
+    url: str = Form(None),
+    questions_number: int = Form(10),
+    custom_questions: str = Form(""),
+    user_id: int = Form(...)
+):
+    try:
+        file_path = ""
+        if file:
+            filename = f"{int(datetime.now().timestamp())}_{file.filename}"
+            file_path = os.path.join(UPLOAD_DIR, filename)
+            with open(file_path, "wb") as f:
+                f.write(await file.read())
+
+        elif url:
+            file_path = None  # سنستخدم URL بدلًا من ملف
+
+        else:
+            return JSONResponse({"error": "رابط أو ملف مطلوب"}, status_code=400)
+
+        # استخراج النص
+        if file_path:
+            ext = os.path.splitext(file_path)[1].lower()
+            if ext == ".pdf":
+                extracted_text = extract_text_from_pdf(file_path)
+            elif ext in [".doc", ".docx"]:
+                extracted_text = extract_text_from_docx(file_path)
+            elif ext == ".pptx":
+                extracted_text = extract_text_from_pptx(file_path)
+            else:
+                return JSONResponse({"error": "نوع الملف غير مدعوم"}, status_code=400)
+        else:
+            extracted_text = extract_text_from_url(url)
+
+        if not extracted_text.strip():
+            return JSONResponse({"error": "لا يوجد محتوى صالح للمعالجة"}, status_code=400)
+
+        with open("faq_examples.json", "r", encoding="utf-8") as f:
+            faq_examples = json.load(f)
+
+        # توليد الأسئلة
+        faq_result = generate_questions_and_answers(extracted_text, questions_number, custom_questions, faq_examples)
+
+        # تخزين في قاعدة البيانات
+        saved = insert_full_record(user_id, file_path, url, questions_number, custom_questions, faq_result)
+
+        # حذف الملف بعد الاستخدام
+        if file_path and os.path.exists(file_path):
+            os.remove(file_path)
+
+        return JSONResponse(content={"questions_and_answers": faq_result})
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
 # واجهة المعالجة عبر record_id
 @app.get("/process-faq/{record_id}")
 def process_faq(record_id: int):
@@ -137,10 +200,17 @@ def process_faq(record_id: int):
                 os.remove(file_path)
             except Exception:
                 pass
-
+            cleanup_old_files(days=7)
+            
         return JSONResponse(content={"questions_and_answers": faq_result})
 
     except Exception as e:
         import traceback
         traceback.print_exc()
         return JSONResponse({"error": str(e)}, status_code=500)
+
+def cleanup_old_files(days=7):
+    now = time.time()
+    for f in glob.glob(f"{UPLOAD_DIR}/*"):
+        if os.path.isfile(f) and os.stat(f).st_mtime < now - days * 86400:
+            os.remove(f)
