@@ -13,3 +13,4 @@ requests
 python-multipart
 pymysql
 python-pptx
+PyJWT== 2.10.1
