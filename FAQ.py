@@ -27,7 +27,7 @@ import jwt  # pyjwt
 # ──────────────────────────────────────────────────────────────────────────────
 load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-JWT_SECRET = os.getenv("FAQ_JWT_SECRET", "").strip()  # <-- set this in env
+JWT_SECRET = os.getenv("JWT_SECRET", "").strip()  # <-- set this in env
 if not JWT_SECRET:
     # Safe fallback for dev only (do NOT use in prod)
     JWT_SECRET = "dev-only-secret-change-me"
@@ -281,3 +281,4 @@ def chat(body: ChatIn, authorization: Optional[str] = Header(None)):
 
     # Try streaming; if client/infra blocks streaming, caller will still get text/plain
     return StreamingResponse(stream(), media_type="text/plain")
+
