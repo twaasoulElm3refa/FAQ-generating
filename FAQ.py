@@ -281,7 +281,3 @@ def chat(body: ChatIn, authorization: Optional[str] = Header(None)):
 
     # Try streaming; if client/infra blocks streaming, caller will still get text/plain
     return StreamingResponse(stream(), media_type="text/plain")
-
-
-
-
