@@ -265,7 +265,6 @@ def chat(body: ChatIn, authorization: Optional[str] = Header(None)):
         try:
             response = client.chat.completions.create(
                 model="gpt-5-mini",
-                temperature=0.2,
                 messages=[
                     {"role": "system", "content": sys_prompt},
                     {"role": "user",   "content": user_msg}
@@ -281,5 +280,6 @@ def chat(body: ChatIn, authorization: Optional[str] = Header(None)):
 
     # Try streaming; if client/infra blocks streaming, caller will still get text/plain
     return StreamingResponse(stream(), media_type="text/plain")
+
 
 
