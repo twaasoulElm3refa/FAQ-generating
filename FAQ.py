@@ -94,7 +94,7 @@ def generate_questions_and_answers(text, question_number, questions, faq_example
 {questions}
 """
     completion = client.chat.completions.create(
-        model="gpt-5-mini",
+        model="gpt-4o",
         messages=[{"role": "user", "content": prompt}]
     )
     return completion.choices[0].message.content
@@ -264,7 +264,8 @@ def chat(body: ChatIn, authorization: Optional[str] = Header(None)):
     def stream():
         try:
             response = client.chat.completions.create(
-                model="gpt-5-mini",
+                model="gpt-4o",
+                temperature=0.2,
                 messages=[
                     {"role": "system", "content": sys_prompt},
                     {"role": "user",   "content": user_msg}
@@ -280,6 +281,7 @@ def chat(body: ChatIn, authorization: Optional[str] = Header(None)):
 
     # Try streaming; if client/infra blocks streaming, caller will still get text/plain
     return StreamingResponse(stream(), media_type="text/plain")
+
 
 
 
