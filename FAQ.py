@@ -106,6 +106,7 @@ def generate_questions_and_answers(text, question_number, questions, faq_example
 async def process_faq(
     file: UploadFile = File(None),
     url: str = Form(None),
+    data: str = Form(""),
     questions_number: int = Form(10),
     custom_questions: str = Form(""),
     user_id: int = Form(...)
@@ -133,6 +134,8 @@ async def process_faq(
                 extracted_text = extract_text_from_pptx(file_path)
             else:
                 return JSONResponse({"error": "نوع الملف غير مدعوم"}, status_code=400)
+        elif data!="":
+            extracted_text = data
         else:
             extracted_text = extract_text_from_url(url)
 
@@ -148,7 +151,7 @@ async def process_faq(
         )
 
         # Save DB
-        saved = insert_full_record(user_id, file_path, url, questions_number, custom_questions, faq_result)
+        saved = insert_full_record(user_id, file_path, url,data, questions_number, custom_questions, faq_result)
 
         # Cleanup
         if file_path and os.path.exists(file_path):
@@ -281,3 +284,4 @@ def chat(body: ChatIn, authorization: Optional[str] = Header(None)):
 
     # Try streaming; if client/infra blocks streaming, caller will still get text/plain
     return StreamingResponse(stream(), media_type="text/plain")
+
