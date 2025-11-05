@@ -5,6 +5,7 @@ import uuid
 import glob
 import fitz  # PDF
 import requests
+ import traceback
 from datetime import datetime
 
 from fastapi import FastAPI, UploadFile, Form, File, Header, HTTPException
@@ -112,18 +113,20 @@ async def process_faq(
     user_id: int = Form(...)
 ):
     try:
-        file_path = ""
+        # --- accept file OR url OR data ---
+        file_path = None
+        url = (url or "").strip()
+        data = (data or "").strip()
+
         if file:
             filename = f"{int(datetime.now().timestamp())}_{file.filename}"
             file_path = os.path.join(UPLOAD_DIR, filename)
             with open(file_path, "wb") as f:
                 f.write(await file.read())
-        elif url:
-            file_path = None
-        else:
-            return JSONResponse({"error": "رابط أو ملف مطلوب"}, status_code=400)
+        elif not url and not data:
+            return JSONResponse({"error": "رابط أو ملف أو نص مطلوب"}, status_code=400)
 
-        # Extract
+        # --- Extract text ---
         if file_path:
             ext = os.path.splitext(file_path)[1].lower()
             if ext == ".pdf":
@@ -134,7 +137,7 @@ async def process_faq(
                 extracted_text = extract_text_from_pptx(file_path)
             else:
                 return JSONResponse({"error": "نوع الملف غير مدعوم"}, status_code=400)
-        elif data!="":
+        elif data:
             extracted_text = data
         else:
             extracted_text = extract_text_from_url(url)
@@ -145,13 +148,20 @@ async def process_faq(
         with open("faq_examples.json", "r", encoding="utf-8") as f:
             faq_examples = json.load(f)
 
-        # LLM
         faq_result = generate_questions_and_answers(
             extracted_text, questions_number, custom_questions, faq_examples
         )
 
-        # Save DB
-        saved = insert_full_record(user_id, file_path, url,data, questions_number, custom_questions, faq_result)
+        # --- Save to DB (keep written data; url/file may be None) ---
+        saved = insert_full_record(
+            user_id=user_id,
+            file_path=file_path,
+            url=url or None,
+            written_data=data or None,
+            questions_number=questions_number,
+            custom_questions=custom_questions or None,
+            faq_result=faq_result
+        )
 
         # Cleanup
         if file_path and os.path.exists(file_path):
@@ -161,7 +171,6 @@ async def process_faq(
         return JSONResponse(content={"questions_and_answers": faq_result})
 
     except Exception as e:
-        import traceback
         traceback.print_exc()
         return JSONResponse({"error": str(e)}, status_code=500)
 
@@ -284,4 +293,5 @@ def chat(body: ChatIn, authorization: Optional[str] = Header(None)):
 
     # Try streaming; if client/infra blocks streaming, caller will still get text/plain
     return StreamingResponse(stream(), media_type="text/plain")
+
 
