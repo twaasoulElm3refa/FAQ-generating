@@ -36,7 +36,7 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # set to your domain(s) in prod
+    allow_origins=["https://11ai.ellevensa.com"],  # set to your domain(s) in prod
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -290,6 +290,7 @@ def chat(body: ChatIn, authorization: Optional[str] = Header(None)):
 
     # Try streaming; if client/infra blocks streaming, caller will still get text/plain
     return StreamingResponse(stream(), media_type="text/plain")
+
 
 
 
