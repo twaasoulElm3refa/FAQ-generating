@@ -5,7 +5,7 @@ import uuid
 import glob
 import fitz  # PDF
 import requests
- import traceback
+import traceback
 from datetime import datetime
 
 from fastapi import FastAPI, UploadFile, Form, File, Header, HTTPException
@@ -293,5 +293,6 @@ def chat(body: ChatIn, authorization: Optional[str] = Header(None)):
 
     # Try streaming; if client/infra blocks streaming, caller will still get text/plain
     return StreamingResponse(stream(), media_type="text/plain")
+
 
 
