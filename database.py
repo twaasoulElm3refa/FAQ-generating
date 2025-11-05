@@ -3,92 +3,98 @@ from mysql.connector import Error
 from dotenv import load_dotenv
 import os
 
-load_dotenv()  # يبحث عن .env في مجلد المشروع الحالي
+load_dotenv()
 
-api_key = os.getenv("OPENAI_API_KEY")
 db_name = os.getenv("DB_NAME")
 db_host = os.getenv("DB_HOST")
 db_user = os.getenv("DB_USER")
 db_password = os.getenv("DB_PASSWORD")
-db_port = os.getenv("DB_PORT")
+db_port = int(os.getenv("DB_PORT") or 3306)
+
+TABLE = "wpl3_FAQ"
 
 def get_db_connection():
     try:
-        connection = mysql.connector.connect(
+        conn = mysql.connector.connect(
             host=db_host,
             database=db_name,
             user=db_user,
             password=db_password,
-            port=db_port
+            port=db_port,
+            charset="utf8mb4",   # ensure Arabic/emoji safe
+            use_unicode=True
         )
-        if connection.is_connected():
-            print("Connected to MySQL successfully!")
-            return connection
+        return conn
     except Error as e:
         print(f"Error connecting to MySQL: {e}")
         return None
 
-def get_data_by_request_id(request_id):
-    try:
-        connection = get_db_connection()
-        cursor = connection.cursor(dictionary=True)
-
-        query = """
-            SELECT * FROM wpl3_FAQ
-            WHERE id = %s
-        """
-        cursor.execute(query, (request_id,))
-        result = cursor.fetchone()
-        return result if result else None
-        
-    except Exception as e:
-        print(f"❌ Error fetching data for ID {request_id}: {e}")
-        return None
-        
-    finally:
-        cursor.close()
-        connection.close()
-
 def update_faq_result(record_id, FAQ_result):
-    connection = get_db_connection()
-    if connection is None:
+    conn = get_db_connection()
+    if not conn:
         print("Failed to establish database connection")
         return False
+    cur = conn.cursor()
     try:
-        if not FAQ_result:
-            FAQ_result = "لا توجد نتيجة تم إنشاؤها"
-        if not pdf_file_name:
-            pdf_file_name = ""
-        cursor = connection.cursor()
-        query = """
-        "UPDATE wpl3_FAQ SET FAQ_result = %s, updated_at = NOW() WHERE id = %s",
-        VALUES (%s, %s)
+        FAQ_result = FAQ_result or "لا توجد نتيجة تم إنشاؤها"
+        sql = f"""
+            UPDATE `{TABLE}`
+               SET `FAQ_result` = %s,
+                   `updated_at` = NOW()
+             WHERE `id` = %s
         """
-        cursor.execute(query, (FAQ_result, record_id))
-        connection.commit()
-        print("✅ Data inserted successfully into wpl3_FAQ_result")
+        cur.execute(sql, (FAQ_result, record_id))
+        conn.commit()
         return True
     except Error as e:
         print(f"❌ Error updating data: {e}")
         return False
     finally:
-        if connection.is_connected():
-            cursor.close()
-            connection.close()
+        try: cur.close()
+        except: pass
+        try: conn.close()
+        except: pass
 
-def insert_full_record(user_id, file_path, url,written_data, questions_number, custom_questions, faq_result):
-    connection = get_db_connection()
-    cursor = connection.cursor(dictionary=True)
+def insert_full_record(user_id, file_path, url, written_data, questions_number, custom_questions, faq_result):
+    """
+    Safe parameterized INSERT. Matches columns you’re passing from FastAPI.
+    If your table doesn’t have `written_data` or `date_time`, comment them out accordingly.
+    """
+    conn = get_db_connection()
+    if not conn:
+        raise RuntimeError("DB connection failed")
+
+    cur = conn.cursor()
     try:
-        cursor.execute("""
-            INSERT INTO wpl3_FAQ (user_id, file_path, url,written_data, questions_number, custom_questions, FAQ_result,updated_at)
-            VALUES (%s, %s, %s, %s, %s,%s %s, NOW())
-        """, (user_id, file_path, url,written_data, questions_number, custom_questions, faq_result))
-        connection.commit()
+        sql = f"""
+            INSERT INTO `{TABLE}`
+                (`user_id`, `file_path`, `url`, `written_data`,
+                 `questions_number`, `custom_questions`, `FAQ_result`,
+                 `date_time`, `updated_at`)
+            VALUES
+                (%s, %s, %s, %s,
+                 %s, %s, %s,
+                 NOW(), NOW())
+        """
+        cur.execute(sql, (
+            user_id,
+            file_path or None,
+            url or None,
+            written_data or None,
+            int(questions_number) if questions_number is not None else None,
+            custom_questions or None,
+            faq_result or ""
+        ))
+        conn.commit()
         return True
+    except Error as e:
+        # Log full error for diagnostics
+        print(f"❌ Insert error: {e}")
+        conn.rollback()
+        raise
     finally:
-         if connection.is_connected():
-            cursor.close()
-            connection.close()
-
+        try: cur.close()
+        except: pass
+        try: conn.close()
+        except: pass
 
