@@ -19,7 +19,7 @@ from typing import Optional, List, Dict, Any
 
 from openai import OpenAI
 from dotenv import load_dotenv
-from database import get_data_by_request_id, update_faq_result, insert_full_record
+from database import insert_full_record
 
 import jwt  # pyjwt
 
@@ -290,6 +290,7 @@ def chat(body: ChatIn, authorization: Optional[str] = Header(None)):
 
     # Try streaming; if client/infra blocks streaming, caller will still get text/plain
     return StreamingResponse(stream(), media_type="text/plain")
+
 
 
 
