@@ -145,12 +145,13 @@ async def process_faq(
         with open("faq_examples.json", "r", encoding="utf-8") as f:
             faq_examples = json.load(f)
 
+        # LLM
         faq_result = generate_questions_and_answers(
             extracted_text, questions_number, custom_questions, faq_examples
         )
 
-        # --- Save to DB (keep written data; url/file may be None) ---
-        saved = insert_full_record(
+        # --- Save to DB via DB helper; returns inserted id ---
+        insert_id = insert_full_record(
             user_id=user_id,
             file_path=file_path,
             url=url or None,
@@ -160,14 +161,19 @@ async def process_faq(
             faq_result=faq_result
         )
 
-        # Cleanup
+        # Cleanup temp file(s)
         if file_path and os.path.exists(file_path):
             os.remove(file_path)
             cleanup_old_files(days=7)
 
-        return JSONResponse(content={"questions_and_answers": faq_result})
+        # Frontend will ask WP for a signed token using this id
+        return JSONResponse(content={
+            "questions_and_answers": faq_result,
+            "request_id": insert_id
+        })
 
     except Exception as e:
+        import traceback
         traceback.print_exc()
         return JSONResponse({"error": str(e)}, status_code=500)
 
@@ -290,6 +296,7 @@ def chat(body: ChatIn, authorization: Optional[str] = Header(None)):
 
     # Try streaming; if client/infra blocks streaming, caller will still get text/plain
     return StreamingResponse(stream(), media_type="text/plain")
+
 
 
 
