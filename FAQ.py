@@ -262,7 +262,9 @@ def create_session(body: SessionIn):
 @app.post("/chat")
 def chat(body: ChatIn, authorization: Optional[str] = Header(None)):
     _verify_jwt(authorization)
-
+    if not body.session_id or not isinstance(body.session_id, str) or not body.session_id.strip():
+        raise HTTPException(status_code=422, detail="session_id is required (non-empty string).")
+        
     context = _values_to_context(body.visible_values)
     sys_prompt = (
         "أنت مساعد يجيب باحتراف اعتمادًا على بيانات المستخدم المرئية أدناه. "
@@ -296,11 +298,3 @@ def chat(body: ChatIn, authorization: Optional[str] = Header(None)):
 
     # Try streaming; if client/infra blocks streaming, caller will still get text/plain
     return StreamingResponse(stream(), media_type="text/plain")
-
-
-
-
-
-
-
-
