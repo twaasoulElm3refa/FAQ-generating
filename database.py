@@ -11,7 +11,7 @@ db_user = os.getenv("DB_USER")
 db_password = os.getenv("DB_PASSWORD")
 db_port = int(os.getenv("DB_PORT", "3306"))
 
-TABLE = "wpl3_FAQ"
+TABLE = "A11i_FAQ"
 
 def get_db_connection():
     return mysql.connector.connect(
